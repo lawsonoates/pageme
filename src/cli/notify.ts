@@ -1,4 +1,4 @@
-import { Console, Effect, Option } from 'effect';
+import { Console, Effect } from 'effect';
 import { Command, Flag } from 'effect/unstable/cli';
 
 import { Destination } from '../destination/index.ts';
@@ -6,28 +6,20 @@ import { Agent, Level, Message } from '../notification.ts';
 import { descriptions } from '../notify-request.ts';
 import { Registry } from '../registry.ts';
 
-// The agent half of the CLI. These two commands are the CLI adapter over
-// `Registry.send`, and their twins live in `src/mcp.ts`; the pair must accept
-// and return the same things, so they are kept in one file to be read side by
-// side. Prose here is written for a model, not for a person.
+// The agent half of the CLI: these two commands are the whole surface an agent
+// touches, and `./config.ts` is the human one. Prose here is written for a
+// model, not for a person.
 
-/**
- * `pageme notify` — the CLI transport.
- *
- * Takes the same `NotifyRequest` the MCP tool takes, spelled as flags and
- * validated by the same schemas, so both transports accept exactly what the
- * other does.
- */
+// Spells `NotifyRequest` as flags and validates them with that struct's own
+// schemas, so what the CLI accepts is defined in one place.
 export const notify = Command.make(
 	'notify',
 	{
-		agent: Flag.string('agent').pipe(
-			Flag.withSchema(Agent),
+		agent: Flag.choice('agent', Agent.literals).pipe(
 			Flag.withDescription(descriptions.agent)
 		),
 		destination: Flag.choice('destination', Destination.names).pipe(
-			Flag.withDescription(descriptions.destination),
-			Flag.optional
+			Flag.withDescription(descriptions.destination)
 		),
 		level: Flag.choice('level', Level.literals).pipe(
 			Flag.withDescription(descriptions.level)
@@ -42,12 +34,12 @@ export const notify = Command.make(
 			const registry = yield* Registry.Service;
 			const sent = yield* registry.send({
 				agent,
-				destination: Option.getOrUndefined(destination),
+				destination,
 				level,
 				message,
 			});
-			// Same payload the MCP tool returns, so an agent reads one result
-			// shape whichever transport it came through.
+			// JSON rather than prose: the reader is an agent, and a
+			// machine-readable result is one less thing to parse wrong.
 			yield* Console.log(
 				JSON.stringify({ delivered: true, destination: sent })
 			);
@@ -58,21 +50,12 @@ export const notify = Command.make(
 	)
 );
 
-/**
- * `pageme destinations` — what the agent can actually deliver to.
- *
- * Written for an agent to parse, not for a human to read: `config list` is the
- * human view of the same state.
- */
+// Written for an agent to parse, not a human: `config list` is the human view
+// of the same state.
 export const destinations = Command.make('destinations', {}, () =>
 	Effect.gen(function* () {
 		const registry = yield* Registry.Service;
-		yield* Console.log(
-			JSON.stringify({
-				configured: registry.available,
-				default: Option.getOrNull(registry.fallback),
-			})
-		);
+		yield* Console.log(JSON.stringify({ configured: registry.available }));
 	})
 ).pipe(
 	Command.withDescription(

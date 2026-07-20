@@ -1,67 +1,57 @@
 ---
 name: pageme
-description: Notify the user through PageMe when you need their input, when an important task fails, or when a long-running task completes. Use when the user asks to be paged, told, messaged, pinged, or notified about work finishing — including when they name a destination like "page me on telegram when you're done".
+description: Send PageMe notifications when a coding agent needs user input, an important task fails, or long-running work completes. Use when the user asks to be paged, pinged, messaged, told, alerted, or notified—including requests such as "page me on Discord when this finishes" or "let me know when you need me."
+allowed-tools: Bash(pageme:*)
 ---
 
-# PageMe
+# User Notifications with PageMe
 
-Sends the user a notification. Destinations are configured by the user, not by you.
+Send notifications through the `pageme` CLI. The user configures destinations; the agent only checks and uses them.
 
-## Which transport
+## Workflow
 
-PageMe is reachable two ways, and they take the same fields and return the same result:
+1. Before starting work the user expects to be notified about, check destinations:
 
-- If the `notify` and `destinations` **MCP tools** are available, call those.
-- Otherwise run the **`pageme` CLI**.
+    ```bash
+    pageme destinations
+    ```
 
-Everything below applies to both; the CLI form is shown because it is the one that needs spelling out.
+    It prints JSON such as `{"configured":["discord","desktop"]}`.
 
-## Check destinations first
+2. Choose only a configured destination. Prefer one the user named. If that destination is unavailable, tell them before starting rather than silently substituting another. If none are configured, ask the user to run `pageme config add`.
 
-**Before promising a destination**, and before any long task you will report back on:
+3. Send the notification only when the requested event occurs:
 
-```bash
-pageme destinations
-```
+    ```bash
+    pageme notify --destination discord --agent pi --level completed \
+      --message "Migration complete; all 42 tests pass."
+    ```
+
+4. Confirm delivery succeeded before saying the user was notified.
+
+## Sending
+
+Every notification requires:
+
+- `--destination`: configured `discord` or `desktop`; there is no default
+- `--agent`: your identity—`claude`, `codex`, `grok`, or `pi`
+- `--level`: `info`, `completed`, `failed`, or `action_required`
+- `--message`: a non-empty body of at most 2000 characters, passed as one quoted shell argument
+
+Use `action_required` when blocked on user input, `failed` for important failures, and `completed` when monitored work finishes. Use `info` for other requested alerts.
+
+Keep messages self-contained: state what happened and include the result, blocker, or next action. Do not include secrets or raw logs.
+
+## Failures
+
+Success exits with status 0 and prints JSON such as:
 
 ```json
-{
-	"configured": ["desktop"],
-	"default": "desktop"
-}
+{ "delivered": true, "destination": "discord" }
 ```
 
-Only `configured` destinations work. If the user asks for one that is not in that list, say so immediately and offer a configured one — do not discover it later when the work is already done and the notification fails.
+On a non-zero exit, never claim delivery succeeded. If the user named the destination, report the failure rather than redirecting silently. Otherwise, retry once with another configured destination when available. If `pageme` is missing, tell the user to run `npm install -g pageme`; do not install it without permission.
 
-If `configured` is empty, tell the user to run `pageme config add` before relying on notifications.
+## When to Notify
 
-## Send
-
-```bash
-pageme notify --agent "Claude Code" --level completed \
-  --message "Migration applied; 42 tests pass."
-```
-
-- `--agent` — your product name, e.g. `Claude Code` or `Codex` (not a headline).
-- `--message` — the detail, ≤ 2000 chars. Quote it. For anything multi-line, prefer a single-quoted string so backticks and `$` are not expanded by the shell.
-- `--level` — `info`, `completed`, `failed`, or `action_required`.
-- `--destination` — omit to use the user's default. Set it **only** when the user named one ("telegram me when it's done").
-
-On success it prints `{"delivered":true,"destination":"desktop"}` and exits 0.
-
-## When it fails
-
-A failed page exits non-zero and explains itself on stderr. Naming a destination that is not configured tells you which ones are, so retry against one of those rather than guessing:
-
-```text
-"telegram" is not configured. Configured destinations: desktop. Retry with one of
-those, or tell the user to run `pageme config add telegram`.
-```
-
-Do not report a task as "you've been notified" when the page failed.
-
-## When to notify
-
-Notify when you need input to continue, when an important task fails, or when a long-running task completes.
-
-Do not send routine progress updates.
+Notify when the user requested it, input is required to continue, an important task fails, or long-running work completes. Send one notification per event. Do not notify for quick tasks or routine progress unless explicitly asked.

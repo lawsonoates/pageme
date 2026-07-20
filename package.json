@@ -22,11 +22,7 @@
 		"dev": "bun run src/index.ts"
 	},
 	"dependencies": {
-		"@chat-adapter/state-memory": "^4.34.0",
-		"@chat-adapter/telegram": "^4.34.0",
 		"@effect/platform-node": "4.0.0-beta.94",
-		"chat": "^4.34.0",
-		"dedent": "^1.7.2",
 		"effect": "4.0.0-beta.94"
 	},
 	"devDependencies": {

@@ -3,6 +3,7 @@ import { Argument, Command, Prompt } from 'effect/unstable/cli';
 
 import { Config } from '../config.ts';
 import { Desktop } from '../destination/desktop.ts';
+import { Discord } from '../destination/discord.ts';
 import { Destination } from '../destination/index.ts';
 
 // The human half of the CLI: interactive, prose written for the user, and
@@ -18,32 +19,29 @@ const parse = (name: string) =>
 				})
 			);
 
-const addTelegram = Effect.gen(function* () {
+// One prompt, because a Discord incoming webhook URL is the whole
+// configuration. Prompted as a password: it grants anyone holding it the right
+// to post, so it should not sit in the terminal scrollback.
+const addDiscord = Effect.gen(function* () {
 	const config = yield* Config.Service;
 
-	const token = yield* Prompt.run(
+	const url = yield* Prompt.run(
 		Prompt.password({
-			message: 'Telegram bot token (from @BotFather)',
-		})
-	);
-	const channel = yield* Prompt.run(
-		Prompt.text({
-			message: 'Chat id to post to, e.g. telegram:12345678',
+			message:
+				'Discord webhook URL (Channel Settings → Integrations → Webhooks → New Webhook → Copy Webhook URL)',
 			validate: (value) =>
-				value.startsWith('telegram:')
+				Discord.isWebhookUrl(value)
 					? Effect.succeed(value)
-					: Effect.fail('Chat id must start with "telegram:".'),
+					: Effect.fail(
+							'That is not a Discord webhook URL. It should start with https://discord.com/api/webhooks/.'
+						),
 		})
 	);
 
-	yield* config.setToken(token);
+	yield* config.setToken('discord', url);
 	const file = yield* config.read();
-	yield* config.write({
-		...file,
-		default: file.default ?? 'telegram',
-		telegram: { channel },
-	});
-	yield* Console.log('✓ Configured telegram');
+	yield* config.write({ ...file, discord: {} });
+	yield* Console.log('✓ Configured discord');
 });
 
 const addDesktop = Effect.gen(function* () {
@@ -56,11 +54,7 @@ const addDesktop = Effect.gen(function* () {
 
 	const config = yield* Config.Service;
 	const file = yield* config.read();
-	yield* config.write({
-		...file,
-		default: file.default ?? 'desktop',
-		desktop: {},
-	});
+	yield* config.write({ ...file, desktop: {} });
 	yield* Console.log('✓ Configured desktop');
 });
 
@@ -91,7 +85,8 @@ const add = Command.make(
 				onSome: parse,
 			});
 
-			return yield* chosen === 'telegram' ? addTelegram : addDesktop;
+			const flows = { desktop: addDesktop, discord: addDiscord };
+			return yield* flows[chosen];
 		})
 ).pipe(Command.withDescription('Configure a notification destination'));
 
@@ -99,22 +94,21 @@ const list = Command.make('list', {}, () =>
 	Effect.gen(function* () {
 		const config = yield* Config.Service;
 		const file = yield* config.read();
-		const token = yield* config.token();
 
 		yield* Console.log(`Config: ${config.path}\n`);
 
 		for (const name of Destination.names) {
+			// A chat destination counts as on only with both halves present,
+			// matching what the registry actually builds.
 			const on =
-				name === 'telegram'
-					? Boolean(file.telegram) && Option.isSome(token)
-					: Boolean(file.desktop) && Desktop.supported;
-			const mark = file.default === name ? ' (default)' : '';
-			const detail =
-				name === 'telegram' && file.telegram
-					? ` → ${file.telegram.channel}`
-					: '';
+				name === 'desktop'
+					? Boolean(file.desktop) && Desktop.supported
+					: Boolean(file[name]) &&
+						Option.isSome(yield* config.token(name));
+			// No target is printed: Discord's lives inside the webhook URL,
+			// which is a secret, and desktop has none.
 			yield* Console.log(
-				`${on ? '✓' : '✗'} ${name}${mark}${detail} — ${Destination.labels[name]}`
+				`${on ? '✓' : '✗'} ${name} — ${Destination.labels[name]}`
 			);
 		}
 	})
@@ -133,47 +127,14 @@ const rm = Command.make(
 			const chosen = yield* parse(name);
 			const file = yield* config.read();
 
-			if (chosen === 'telegram') yield* config.clearToken();
+			if (chosen !== 'desktop') yield* config.clearToken(chosen);
 
-			const next = { ...file, [chosen]: undefined };
-			yield* config.write({
-				...next,
-				default: next.default === chosen ? undefined : next.default,
-			});
+			yield* config.write({ ...file, [chosen]: undefined });
 			yield* Console.log(`✓ Removed ${chosen}`);
 		})
 ).pipe(Command.withDescription('Remove a configured destination'));
 
-const fallback = Command.make(
-	'default',
-	{
-		name: Argument.string('destination').pipe(
-			Argument.withDescription(
-				'Destination used when the agent does not name one'
-			)
-		),
-	},
-	({ name }) =>
-		Effect.gen(function* () {
-			const config = yield* Config.Service;
-			const chosen = yield* parse(name);
-			const file = yield* config.read();
-
-			if (!file[chosen]) {
-				return yield* new Config.ConfigError({
-					message: `"${chosen}" is not configured yet. Run \`pageme config add ${chosen}\` first.`,
-				});
-			}
-
-			yield* config.write({ ...file, default: chosen });
-			yield* Console.log(`✓ Default destination is now ${chosen}`);
-		})
-).pipe(Command.withDescription('Set the default destination'));
-
-/**
- * `pageme config` — manage notification destinations.
- */
 export const config = Command.make('config').pipe(
 	Command.withDescription('Manage notification destinations'),
-	Command.withSubcommands([add, list, rm, fallback])
+	Command.withSubcommands([add, list, rm])
 );

@@ -5,7 +5,7 @@ PageMe lets coding agents notify you when they need input, when something fails,
 Notifications can be sent to:
 
 - macOS Notification Center
-- Telegram
+- Discord
 
 ## Install
 
@@ -20,32 +20,11 @@ Run `pageme config add` again to add another destination.
 
 ## Connect your agent
 
-Choose either MCP or the PageMe skill. You do not need both.
-
-### Option 1: MCP
-
-Add PageMe to your agent's MCP configuration:
-
-```json
-{
-	"mcpServers": {
-		"pageme": {
-			"command": "pageme",
-			"args": ["mcp", "serve"]
-		}
-	}
-}
-```
-
-Restart your agent after updating its configuration. It will receive `notify` and `destinations` tools.
-
-### Option 2: Skill and CLI
-
 Copy [`skills/pageme`](./skills/pageme) into your agent's skills directory. The skill teaches the agent to use the installed CLI:
 
 ```bash
 pageme destinations
-pageme notify --agent "Claude Code" --level completed \
+pageme notify --destination discord --agent claude --level completed \
   --message "The task is complete."
 ```
 
@@ -57,16 +36,23 @@ For example:
 
 You can also request a destination directly:
 
-> Page me on Telegram when you're done.
+> Page me on Discord when you're done.
 
 ## Manage destinations
 
 ```bash
 pageme config list
 pageme config add
-pageme config default desktop
-pageme config rm telegram
+pageme config rm discord
 ```
+
+There is no default destination: every `notify` names where it goes. An agent that guesses wrong fails loudly and is told what is configured, rather than delivering somewhere you stopped watching.
+
+Discord stores its webhook URL in an owner-only file under the config directory, and `PAGEME_DISCORD_TOKEN` overrides the stored value so a secret manager can inject one without touching disk.
+
+### Discord
+
+Discord needs one value, and no bot application: in the channel you want to be paged in, open **Channel Settings → Integrations → Webhooks → New Webhook**, copy the webhook URL, and give it to `pageme config add discord`. Treat it as a secret — anyone holding it can post to that channel.
 
 ## Development
 

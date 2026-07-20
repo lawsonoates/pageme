@@ -2,6 +2,8 @@ import { Effect, Stream } from 'effect';
 import type { ChildProcessSpawner } from 'effect/unstable/process';
 import { ChildProcess } from 'effect/unstable/process';
 
+import { agents } from '../notification.ts';
+import type { Notification } from '../notification.ts';
 import { Destination } from './index.ts';
 
 // AppleScript reads the fields from argv, so agent-controlled text never has
@@ -12,23 +14,17 @@ const script = [
 	'end run',
 ].join('\n');
 
-/**
- * Destination that posts to macOS Notification Center via `osascript`. Needs
- * no configuration, but only reaches the user while they are at this machine.
- *
- * @param spawner - Runs `osascript`; injected so the caller owns the platform.
- */
 export const make = (
 	spawner: ChildProcessSpawner.ChildProcessSpawner['Service']
-) =>
-	Destination.make('desktop', (notification) =>
-		Effect.scoped(
+): Destination.Interface => ({
+	send: Effect.fn('Desktop.send')(function* (notification: Notification) {
+		yield* Effect.scoped(
 			Effect.gen(function* () {
 				const handle = yield* spawner.spawn(
 					ChildProcess.make('osascript', [
 						'-e',
 						script,
-						notification.agent,
+						agents[notification.agent],
 						notification.message,
 					])
 				);
@@ -41,19 +37,28 @@ export const make = (
 				const code = yield* handle.exitCode;
 
 				if (code !== 0) {
-					return yield* Effect.fail(
-						new Error(
-							output.trim() || `osascript exited with ${code}`
-						)
-					);
+					return yield* new Destination.DeliveryError({
+						destination: 'desktop',
+						message:
+							output.trim() || `osascript exited with ${code}`,
+					});
 				}
 			})
-		)
-	);
+		).pipe(
+			// Spawning and draining fail in the platform's vocabulary; the
+			// exit-code path above already speaks ours.
+			Effect.mapError((cause) =>
+				cause instanceof Destination.DeliveryError
+					? cause
+					: new Destination.DeliveryError({
+							destination: 'desktop',
+							message: cause.message,
+						})
+			)
+		);
+	}),
+});
 
-/**
- * Notification Center only exists on macOS.
- */
 export const supported = process.platform === 'darwin';
 
 // oxlint-disable-next-line no-barrel-file -- self-reexport gives namespace ergonomics without `namespace`; nothing beyond this module is re-exported
