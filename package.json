@@ -1,7 +1,7 @@
 {
 	"$schema": "https://json.schemastore.org/package.json",
 	"name": "@lawsonoates/pageme",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Let local coding agents notify you when they need input or finish work.",
 	"keywords": [
 		"agent",
