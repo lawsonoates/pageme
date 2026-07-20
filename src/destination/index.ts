@@ -15,6 +15,11 @@ export const labels: Record<Name, string> = {
 	discord: 'Discord message to your channel',
 };
 
+const titles: Record<Name, string> = {
+	desktop: 'Desktop notifications',
+	discord: 'Discord',
+};
+
 export class DeliveryError extends Schema.TaggedErrorClass<DeliveryError>()(
 	'DeliveryError',
 	{
@@ -42,8 +47,8 @@ export const notConfigured = (
 		available,
 		message:
 			available.length === 0
-				? `"${requested}" is not configured, and no other destination is either. Tell the user to run \`pageme config add ${requested}\`.`
-				: `"${requested}" is not configured. Configured destinations: ${available.join(', ')}. Retry with one of those, or tell the user to run \`pageme config add ${requested}\`.`,
+				? `${titles[requested]} is not configured. Set it up with \`pageme config add ${requested}\`, then retry.`
+				: `${titles[requested]} is not configured. Configured destinations: ${available.join(', ')}. Retry with one of those, or set it up with \`pageme config add ${requested}\`.`,
 		requested,
 	});
 

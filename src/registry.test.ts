@@ -78,8 +78,8 @@ describe('registry', () => {
 		expect((error as Destination.NotConfiguredError).available).toEqual([
 			'desktop',
 		]);
-		expect((error as Destination.NotConfiguredError).message).toContain(
-			'desktop'
+		expect((error as Destination.NotConfiguredError).message).toBe(
+			'Discord is not configured. Configured destinations: desktop. Retry with one of those, or set it up with `pageme config add discord`.'
 		);
 		expect(sent).toEqual([]);
 	});
@@ -93,9 +93,9 @@ describe('registry', () => {
 		expect(error).toBeInstanceOf(Destination.NotConfiguredError);
 		expect((error as Destination.NotConfiguredError).available).toEqual([]);
 		// With nothing set up the agent cannot retry its way out, so the
-		// message has to point at `config add` instead.
-		expect((error as Destination.NotConfiguredError).message).toContain(
-			'pageme config add'
+		// message gives the exact setup command and tells it to retry.
+		expect((error as Destination.NotConfiguredError).message).toBe(
+			'Discord is not configured. Set it up with `pageme config add discord`, then retry.'
 		);
 		expect(registry.available).toEqual([]);
 	});

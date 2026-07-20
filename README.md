@@ -12,7 +12,7 @@ Notifications can be sent to:
 PageMe requires Node.js 22 or newer.
 
 ```bash
-npm install -g @lawsonoates/pageme
+bun add -g @lawsonoates/pageme
 pageme config add
 ```
 
@@ -20,13 +20,13 @@ Run `pageme config add` again to add another destination.
 
 ## Connect your agent
 
-Copy [`skills/pageme`](./skills/pageme) into your agent's skills directory. The skill teaches the agent to use the installed CLI:
+Install the PageMe skill by running:
 
 ```bash
-pageme destinations
-pageme notify --destination discord --agent claude --level completed \
-  --message "The task is complete."
+bunx skills add lawsonoates/pageme
 ```
+
+The skill teaches your coding agent when and how to use the installed PageMe CLI.
 
 ## Tell your agent when to page you
 
