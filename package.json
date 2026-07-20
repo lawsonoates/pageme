@@ -1,20 +1,40 @@
 {
 	"$schema": "https://json.schemastore.org/package.json",
-	"name": "pageme",
+	"name": "@lawsonoates/pageme",
 	"version": "0.1.0",
 	"description": "Let local coding agents notify you when they need input or finish work.",
+	"keywords": [
+		"agent",
+		"cli",
+		"coding-agent",
+		"discord",
+		"notifications"
+	],
+	"homepage": "https://github.com/lawsonoates/pageme#readme",
+	"bugs": {
+		"url": "https://github.com/lawsonoates/pageme/issues"
+	},
 	"license": "MIT",
+	"author": "Lawson Oates (https://github.com/lawsonoates)",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/lawsonoates/pageme.git"
+	},
 	"bin": {
-		"pageme": "./dist/index.js"
+		"pageme": "dist/index.mjs"
 	},
 	"files": [
 		"dist",
 		"skills"
 	],
 	"type": "module",
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
-		"build": "tsgo",
+		"build": "tsdown",
 		"prepublishOnly": "bun run build",
+		"release": "bun run script/publish.ts",
 		"typecheck": "tsgo --noEmit",
 		"check": "ultracite check",
 		"fix": "ultracite fix",
@@ -32,6 +52,8 @@
 		"@typescript/native-preview": "7.0.0-dev.20251207.1",
 		"oxfmt": "^0.58.0",
 		"oxlint": "^1.73.0",
+		"publint": "0.3.21",
+		"tsdown": "0.22.12",
 		"typescript": "6.0.3",
 		"ultracite": "7.9.3"
 	},

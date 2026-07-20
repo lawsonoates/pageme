@@ -7,6 +7,7 @@ import {
 import { Effect, Layer } from 'effect';
 import { Command } from 'effect/unstable/cli';
 
+import pkg from '../package.json' with { type: 'json' };
 import { Cli } from './cli/index.ts';
 
 // Every expected failure carries a `message` written for whoever reads it, and
@@ -17,7 +18,7 @@ const report = (error: { readonly message: string }) =>
 		process.exitCode = 1;
 	});
 
-Command.run(Cli.run, { version: '0.1.0' }).pipe(
+Command.run(Cli.run, { version: pkg.version }).pipe(
 	Effect.catchTags({
 		ConfigError: report,
 		DeliveryError: report,

@@ -12,7 +12,7 @@ Notifications can be sent to:
 PageMe requires Node.js 22 or newer.
 
 ```bash
-npm install -g pageme
+npm install -g @lawsonoates/pageme
 pageme config add
 ```
 
@@ -63,3 +63,13 @@ bun run typecheck
 bun run check
 bun run build
 ```
+
+## Publishing
+
+From a clean, up-to-date `master` branch, release a version with:
+
+```bash
+bun run release <version>
+```
+
+The release script validates, builds, previews the package, tags the release, and publishes it publicly.

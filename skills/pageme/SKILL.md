@@ -50,7 +50,7 @@ Success exits with status 0 and prints JSON such as:
 { "delivered": true, "destination": "discord" }
 ```
 
-On a non-zero exit, never claim delivery succeeded. If the user named the destination, report the failure rather than redirecting silently. Otherwise, retry once with another configured destination when available. If `pageme` is missing, tell the user to run `npm install -g pageme`; do not install it without permission.
+On a non-zero exit, never claim delivery succeeded. If the user named the destination, report the failure rather than redirecting silently. Otherwise, retry once with another configured destination when available. If `pageme` is missing, tell the user to run `npm install -g @lawsonoates/pageme`; do not install it without permission.
 
 ## When to Notify
 
